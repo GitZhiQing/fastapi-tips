@@ -1,45 +1,42 @@
-# 101 FastAPI Tips by [The FastAPI Expert]
+# [FastAPI 专家]的 101 个 FastAPI 技巧
 
-This repository contains trips and tricks for FastAPI. If you have any tip that you believe is useful, feel free
-to open an issue or a pull request.
+> 本文档翻译自 [fastapi-tips](https://github.com/Kludex/fastapi-tips)。
 
-Consider sponsor me on GitHub to support my work. With your support, I will be able to create more content like this.
+这个仓库包含了 FastAPI 的技巧和窍门。如果你有任何你认为有用的技巧，欢迎提交 issue 或者 pull request。
 
-[![GitHub Sponsors](https://img.shields.io/badge/Sponsor%20me%20on-GitHub-%23EA4AAA)](https://github.com/sponsors/Kludex)
+请考虑在 GitHub 上赞助我以支持我的工作。有了你的支持，我将能够创作更多类似的内容。
+
+[![GitHub 赞助](https://img.shields.io/badge/Sponsor%20me%20on-GitHub-%23EA4AAA)](https://github.com/sponsors/Kludex)
 
 > [!TIP]
-    Remember to **watch this repository** to receive notifications about new tips.
+> 记得**关注这个仓库**以接收新技巧的通知。
 
-## 1. Install `uvloop` and `httptools`
+## 1. 安装 `uvloop` 和 `httptools`
 
-By default, [Uvicorn][uvicorn] doesn't comes with `uvloop` and `httptools` which are faster than the default
-asyncio event loop and HTTP parser. You can install them using the following command:
+默认情况下，[Uvicorn][uvicorn] 不包含 `uvloop` 和 `httptools`，它们比默认的 asyncio 事件循环和 HTTP 解析器更快。你可以使用以下命令安装它们：
 
 ```bash
 pip install uvloop httptools
 ```
 
-[Uvicorn][uvicorn] will automatically use them if they are installed in your environment.
+[Uvicorn][uvicorn] 会在你的环境中安装了它们的情况下自动使用它们。
 
 > [!WARNING]
-> `uvloop` can't be installed on Windows. If you use Windows locally, but Linux on production, you can use
-> an [environment marker](https://peps.python.org/pep-0496/) to not install `uvloop` on Windows
-> e.g. `uvloop; sys_platform != 'win32'`.
+> `uvloop` 不能在 Windows 上安装。如果你在本地使用 Windows，但在生产环境中使用 Linux，你可以使用一个 [环境标记](https://peps.python.org/pep-0496/) 来在 Windows 上不安装 `uvloop`
+> 例如 `uvloop; sys_platform != 'win32'`。
 
-## 2. Be careful with non-async functions
+## 2. 小心非异步函数
 
-There's a performance penalty when you use non-async functions in FastAPI. So, always prefer to use async functions.
-The penalty comes from the fact that FastAPI will call [`run_in_threadpool`][run_in_threadpool], which will run the
-function using a thread pool.
+在 FastAPI 中使用非异步函数时会有性能损失。所以，尽量使用异步函数。
+这个性能损失是因为 FastAPI 会调用 [`run_in_threadpool`][run_in_threadpool]，它会使用一个线程池来运行这个函数。
 
 > [!NOTE]
-    Internally, [`run_in_threadpool`][run_in_threadpool] will use [`anyio.to_thread.run_sync`][run_sync] to run the
-    function in a thread pool.
+> 在内部，[`run_in_threadpool`][run_in_threadpool] 会使用 [`anyio.to_thread.run_sync`][run_sync] 在线程池中运行这个函数。
 
 > [!TIP]
-    There are only 40 threads available in the thread pool. If you use all of them, your application will be blocked.
+> 线程池中只有 40 个线程可用。如果你使用了所有的线程，你的应用程序将被阻塞。
 
-To change the number of threads available, you can use the following code:
+要改变线程池中可用的线程数量，你可以使用以下代码：
 
 ```py
 import anyio
@@ -58,15 +55,15 @@ async def lifespan(app: FastAPI) -> Iterator[None]:
 app = FastAPI(lifespan=lifespan)
 ```
 
-You can read more about it on [AnyIO's documentation][increase-threadpool].
+你可以在 [AnyIO's 文档][increase-threadpool] 中阅读更多相关信息。
 
-## 3. Use `async for` instead of `while True` on WebSocket
+## 3. 使用 `async for` 代替 `while True` 处理 WebSocket
 
-Most of the examples you will find on the internet use `while True` to read messages from the WebSocket.
+大多数你在网上找到的示例都会使用 `while True` 从 WebSocket 读取消息。
 
-I believe the uglier notation is used mainly because the Starlette documentation didn't show the `async for` notation for a long time.
+我认为这种不太优雅的写法主要是因为 Starlette 文档很长时间没有展示 `async for` 的用法。
 
-Instead of using the `while True`:
+与其使用 `while True`：
 
 ```py
 from fastapi import FastAPI
@@ -82,7 +79,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         await websocket.send_text(f"Message text was: {data}")
 ```
 
-You can use the `async for` notation:
+你可以使用 `async for` 语法：
 
 ```py
 from fastapi import FastAPI
@@ -97,12 +94,12 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         await websocket.send_text(f"Message text was: {data}")
 ```
 
-You can read more about it on the [Starlette documentation][websockets-iter-data].
+你可以在 [Starlette 文档][websockets-iter-data] 中阅读更多相关信息。
 
-## 4. Ignore the `WebSocketDisconnect` exception
+## 4. 忽略 `WebSocketDisconnect` 异常
 
-If you are using the `while True` notation, you will need to catch the `WebSocketDisconnect`.
-The `async for` notation will catch it for you.
+如果你使用 `while True` 语法，你需要捕获 `WebSocketDisconnect` 异常。
+而使用 `async for` 语法会自动捕获该异常。
 
 ```py
 from fastapi import FastAPI
@@ -121,16 +118,15 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         pass
 ```
 
-If you need to release resources when the WebSocket is disconnected, you can use that exception to do it.
+如果你需要在 WebSocket 断开连接时释放资源，可以使用该异常来处理。
 
-If you are using an older FastAPI version, only the `receive` methods will raise the `WebSocketDisconnect` exception.
-The `send` methods will not raise it. In the latest versions, all methods will raise it.
-In that case, you'll need to add the `send` methods inside the `try` block.
+如果你使用的是旧版本的 FastAPI，只有 `receive` 方法会引发 `WebSocketDisconnect` 异常。
+`send` 方法不会引发该异常。在最新版本中，所有方法都会引发该异常。
+在这种情况下，你需要将 `send` 方法放在 `try` 块中。
 
-## 5. Use HTTPX's `AsyncClient` instead of `TestClient`
+## 5. 使用 HTTPX 的 `AsyncClient` 代替 `TestClient`
 
-Since you are using `async` functions in your application, it will be easier to use HTTPX's `AsyncClient`
-instead of Starlette's `TestClient`.
+由于你的应用程序中使用了 `async` 函数，使用 HTTPX 的 `AsyncClient` 会比使用 Starlette 的 `TestClient` 更加方便。
 
 ```py
 from fastapi import FastAPI
@@ -144,7 +140,7 @@ async def read_root():
     return {"Hello": "World"}
 
 
-# Using TestClient
+# 使用 TestClient
 from starlette.testclient import TestClient
 
 client = TestClient(app)
@@ -152,7 +148,7 @@ response = client.get("/")
 assert response.status_code == 200
 assert response.json() == {"Hello": "World"}
 
-# Using AsyncClient
+# 使用 AsyncClient
 import anyio
 from httpx import AsyncClient, ASGITransport
 
@@ -167,8 +163,7 @@ async def main():
 anyio.run(main)
 ```
 
-If you are using lifespan events (`on_startup`, `on_shutdown` or the `lifespan` parameter), you can use the
-[`asgi-lifespan`][asgi-lifespan] package to run those events.
+如果你使用生命周期事件（`on_startup`、`on_shutdown` 或 `lifespan` 参数），可以使用 [`asgi-lifespan`][asgi-lifespan] 包来运行这些事件。
 
 ```py
 from contextlib import asynccontextmanager
@@ -207,16 +202,15 @@ anyio.run(main)
 ```
 
 > [!NOTE]
-    Consider supporting the creator of [`asgi-lifespan`][asgi-lifespan] [Florimond Manca][florimondmanca] via GitHub Sponsors.
+> 请考虑通过 GitHub 赞助支持 [`asgi-lifespan`][asgi-lifespan] 的创建者 [Florimond Manca][florimondmanca]。
 
-## 6. Use Lifespan State instead of `app.state`
+## 6. 使用生命周期状态代替 `app.state`
 
-Since not long ago, FastAPI supports the [lifespan state], which defines a standard way to manage objects that need to be created at
-startup, and need to be used in the request-response cycle.
+不久前，FastAPI 开始支持 [生命周期状态]，它定义了一种标准的方法来管理在启动时需要创建的对象，并在请求-响应周期中使用这些对象。
 
-The `app.state` is not recommended to be used anymore. You should use the [lifespan state] instead.
+不再推荐使用 `app.state`。你应该使用 [生命周期状态] 代替。
 
-Using the `app.state`, you'd do something like this:
+使用 `app.state` 时，你可能会这样做：
 
 ```py
 from contextlib import asynccontextmanager
@@ -243,7 +237,7 @@ async def read_root(request: Request):
     return response.json()
 ```
 
-Using the lifespan state, you'd do something like this:
+使用生命周期状态时，你可以这样做：
 
 ```py
 from collections.abc import AsyncIterator
@@ -274,13 +268,13 @@ async def read_root(request: Request) -> dict[str, Any]:
     return response.json()
 ```
 
-## 7. Enable AsyncIO debug mode
+## 7. 启用 AsyncIO 调试模式
 
-If you want to find the endpoints that are blocking the event loop, you can enable the AsyncIO debug mode.
+如果你想找到阻塞事件循环的端点，可以启用 AsyncIO 调试模式。
 
-When you enable it, Python will print a warning message when a task takes more than 100ms to execute.
+启用后，当一个任务执行时间超过 100 毫秒时，Python 会打印警告信息。
 
-Run the following code with `PYTHONASYNCIODEBUG=1 python main.py`:
+使用以下命令运行代码：`PYTHONASYNCIODEBUG=1 python main.py`：
 
 ```py
 import os
@@ -295,7 +289,7 @@ app = FastAPI()
 
 @app.get("/")
 async def read_root():
-    time.sleep(1)  # Blocking call
+    time.sleep(1)  # 阻塞调用
     return {"Hello": "World"}
 
 
@@ -303,7 +297,7 @@ if __name__ == "__main__":
     uvicorn.run(app, loop="uvloop")
 ```
 
-If you call the endpoint, you will see the following message:
+如果你调用该端点，你将看到以下消息：
 
 ```bash
 INFO:     Started server process [19319]
@@ -314,27 +308,27 @@ INFO:     127.0.0.1:50036 - "GET / HTTP/1.1" 200 OK
 Executing <Task finished name='Task-3' coro=<RequestResponseCycle.run_asgi() done, defined at /uvicorn/uvicorn/protocols/http/httptools_impl.py:408> result=None created at /uvicorn/uvicorn/protocols/http/httptools_impl.py:291> took 1.009 seconds
 ```
 
-You can read more about it on the [official documentation](https://docs.python.org/3/library/asyncio-dev.html#debug-mode).
+你可以在 [官方文档](https://docs.python.org/3/library/asyncio-dev.html#debug-mode) 中阅读更多相关信息。
 
-## 8. Implement a Pure ASGI Middleware instead of `BaseHTTPMiddleware`
+## 8. 实现一个纯 ASGI 中间件代替 `BaseHTTPMiddleware`
 
-The [`BaseHTTPMiddleware`][base-http-middleware] is the simplest way to create a middleware in FastAPI.
+[`BaseHTTPMiddleware`][base-http-middleware] 是在 FastAPI 中创建中间件的最简单方法。
 
 > [!NOTE]
-> The `@app.middleware("http")` decorator is a wrapper around the `BaseHTTPMiddleware`.
+> `@app.middleware("http")` 装饰器是 `BaseHTTPMiddleware` 的包装器。
 
-There were some issues with the `BaseHTTPMiddleware`, but most of the issues were fixed in the latest versions.
-That said, there's still a performance penalty when using it.
+`BaseHTTPMiddleware` 存在一些问题，但大多数问题在最新版本中已修复。
+尽管如此，使用它仍然会有性能损失。
 
-To avoid the performance penalty, you can implement a [Pure ASGI middleware]. The downside is that it's more complex to implement.
+为了避免性能损失，你可以实现一个 [纯 ASGI 中间件]。缺点是实现起来更复杂。
 
-Check the Starlette's documentation to learn how to implement a [Pure ASGI middleware].
+查看 Starlette 的文档以了解如何实现 [纯 ASGI 中间件].
 
-## 9. Your dependencies may be running on threads
+## 9. 你的依赖项可能在线程中运行
 
-If the function is non-async and you use it as a dependency, it will run in a thread.
+如果函数是非异步的，并且你将其用作依赖项，它将在一个线程中运行。
 
-In the following example, the `http_client` function will run in a thread:
+在以下示例中，`http_client` 函数将在一个线程中运行：
 
 ```py
 from collections.abc import AsyncIterator
@@ -362,7 +356,8 @@ async def read_root(client: AsyncClient = Depends(http_client)):
     return await client.get("/")
 ```
 
-To run in the event loop, you need to make the function async:
+要在事件循环中运行，你需要将函数改为异步：
+
 ```py
 # ...
 
@@ -372,9 +367,9 @@ async def http_client(request: Request) -> AsyncClient:
 # ...
 ```
 
-As an exercise for the reader, let's learn a bit more about how to check the running threads.
+作为练习，让我们了解更多关于如何检查运行线程的信息。
 
-You can run the following with `python main.py`:
+你可以使用 `python main.py` 运行以下代码：
 
 ```py
 from collections.abc import AsyncIterator
@@ -395,7 +390,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[dict[str, AsyncClient]]:
 app = FastAPI(lifespan=lifespan)
 
 
-# Change this function to be async, and rerun this application.
+# 将此函数改为异步，并重新运行此应用程序。
 def http_client(request: Request) -> AsyncClient:
     return request.state.client
 
@@ -428,7 +423,7 @@ if __name__ == "__main__":
     anyio.run(main)
 ```
 
-If you call the endpoint, you will see the following message:
+如果你调用该端点，你将看到以下消息：
 
 ```bash
 ❯ python main.py
@@ -441,11 +436,11 @@ INFO:     127.0.0.1:57848 - "GET / HTTP/1.1" 200 OK
 Threads in use: 0
 ```
 
-Replace the `def http_client` with `async def http_client` and rerun the application.
-You will not see the message `Threads in use: 1`, because the function is running in the event loop.
+将 `def http_client` 替换为 `async def http_client` 并重新运行应用程序。
+你将不会看到 `Threads in use: 1` 的消息，因为该函数在事件循环中运行。
 
 > [!TIP]
-> You can use the [FastAPI Dependency] package that I've built to make it explicit when a dependency should run in a thread.
+> 你可以使用我构建的 [FastAPI Dependency] 包来明确指定依赖项何时应该在线程中运行。
 
 [uvicorn]: https://www.uvicorn.org/
 [run_sync]: https://anyio.readthedocs.io/en/stable/threads.html#running-a-function-in-a-worker-thread
@@ -454,8 +449,8 @@ You will not see the message `Threads in use: 1`, because the function is runnin
 [websockets-iter-data]: https://www.starlette.io/websockets/#iterating-data
 [florimondmanca]: https://github.com/sponsors/florimondmanca
 [asgi-lifespan]: https://github.com/florimondmanca/asgi-lifespan
-[lifespan state]: https://asgi.readthedocs.io/en/latest/specs/lifespan.html#lifespan-state
-[The FastAPI Expert]: https://github.com/Kludex
+[生命周期状态]: https://asgi.readthedocs.io/en/latest/specs/lifespan.html#lifespan-state
+[FastAPI 专家]: https://github.com/Kludex
 [base-http-middleware]: https://www.starlette.io/middleware/#basehttpmiddleware
-[pure ASGI middleware]: https://www.starlette.io/middleware/#pure-asgi-middleware
+[纯 ASGI 中间件]: https://www.starlette.io/middleware/#pure-asgi-middleware
 [FastAPI Dependency]: https://github.com/kludex/fastapi-dependency
